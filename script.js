@@ -223,6 +223,7 @@ cartList.addEventListener('click', e => {
 });
 
 // ---------- 6. ORDER (TO'G'RILANGAN) ----------
+// ---------- 6. ORDER (TO'LIQ YANGILANGAN) ----------
 orderBtn.addEventListener('click', async () => {
   if (!cart.length) {
     alert('Savat bo\'sh!');
@@ -241,6 +242,10 @@ orderBtn.addEventListener('click', async () => {
     return;
   }
   
+  // Tugmani o'chirib qo'yish (qayta bosilishini oldini olish)
+  orderBtn.disabled = true;
+  orderBtn.textContent = 'Yuborilmoqda...';
+  
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
   
   const payload = {
@@ -248,19 +253,38 @@ orderBtn.addEventListener('click', async () => {
     name: profile.name,
     phone: profile.phone,
     items: cart,
-    total: total
+    total: total,
+    timestamp: new Date().toISOString() // Unikal ID qo'shamiz
   };
   
   console.log('📤 Yuborilmoqda:', payload);
   
-  tg.sendData(JSON.stringify(payload));
-  // WebApp avtomatik yopilmaydi!
-  // Foydalanuvchi o'zi yopadi, shunda bot xabarini ko'radi
-  cart = [];
-  saveCartLS();
-  renderCart();
-  alert('✅ Buyurtma yuborildi! Iltimos, chatga o\'ting va joylashuvingizni yuboring.');
-  
+  try {
+    // MUHIM: ready() chaqirish
+    tg.ready();
+    
+    // Ma'lumot yuborish
+    tg.sendData(JSON.stringify(payload));
+    
+    // Muvaffaqiyatli xabar ko'rsatish
+    alert('✅ Buyurtma yuborildi!\n\nIltimos, chatga o\'ting va "📍 Joylashuvni yuborish" tugmasini bosing.\n\n(WebApp 3 soniyadan keyin yopiladi)');
+    
+    // Savatni tozalash
+    cart = [];
+    saveCartLS();
+    renderCart();
+    
+    // 3 soniya kutib keyin yopish (foydalanuvchi xabarni o'qishi uchun)
+    setTimeout(() => {
+      tg.close();
+    }, 3000);
+    
+  } catch (error) {
+    console.error('Xato:', error);
+    alert('❌ Xatolik yuz berdi. Qaytadan urinib ko\'ring.');
+    orderBtn.disabled = false;
+    orderBtn.textContent = 'Buyurtma berish';
+  }
 });
 
 // ---------- 7. PROFILE ----------
